@@ -27,6 +27,12 @@ INVINCIBILITY_DURATION = 90  # Reduced invincibility duration
 STAR_DURATION = 300  # Reduced star power duration (5 seconds at 60fps)
 SCORE_MULTIPLIER_DURATION = 200  # Reduced score multiplier duration
 
+# Boss constants
+BOSS_WIDTH = 80
+BOSS_HEIGHT = 100
+BOSS_HEALTH = 6   # Reduced from 10 for easier battles
+BOSS_ACTIVATION_DISTANCE = 800  # Distance at which boss activates
+
 # Shrinking platform constants
 SHRINK_DELAY = 60  # Frames before platform starts shrinking
 SHRINK_SPEED = 2   # Pixels to shrink per frame
@@ -67,7 +73,90 @@ def load_image(name, width, height, color=None):
     # Create a placeholder with more detailed character if image doesn't exist
     img = pygame.Surface((width, height), pygame.SRCALPHA)
     
-    if name.startswith("player"):
+    if name.startswith("boss"):
+        # Draw a more savage-looking boss
+        # Base body (dark red)
+        dark_red = (180, 0, 0)
+        pygame.draw.rect(img, dark_red, (width//6, height//6, width*2//3, height*2//3))
+        
+        # Spiky outline
+        for i in range(8):  # Add spikes around the body
+            spike_angle = i * 45  # degrees (8 spikes around)
+            spike_length = width//3
+            center_x, center_y = width//2, height//2
+            end_x = center_x + int(spike_length * pygame.math.Vector2(1, 0).rotate(spike_angle)[0])
+            end_y = center_y + int(spike_length * pygame.math.Vector2(1, 0).rotate(spike_angle)[1])
+            pygame.draw.line(img, (255, 0, 0), (center_x, center_y), (end_x, end_y), width//10)
+        
+        # Menacing face
+        if name.startswith("boss_attack"):
+            # Angry attacking eyes (jagged)
+            eye_color = (255, 255, 0)  # Yellow
+            pygame.draw.polygon(img, eye_color, [(width//3, height//3), 
+                                             (width//2, height//4), 
+                                             (width*2//3, height//3)])
+            pygame.draw.polygon(img, eye_color, [(width//3, height//2), 
+                                             (width//2, height*3//5), 
+                                             (width*2//3, height//2)])
+            
+            # Open mouth with teeth
+            pygame.draw.rect(img, (0, 0, 0), (width//4, height*2//3, width//2, height//5))
+            # Teeth
+            for i in range(4):
+                tooth_x = width//4 + i * width//8
+                pygame.draw.polygon(img, WHITE, [(tooth_x, height*2//3), 
+                                              (tooth_x + width//16, height*2//3), 
+                                              (tooth_x + width//32, height*2//3 + height//10)])
+        else:
+            # Default face (less aggressive but still menacing)
+            # Eyes
+            eye_color = (255, 255, 0)  # Yellow
+            pygame.draw.circle(img, eye_color, (width//3, height*2//5), width//10)
+            pygame.draw.circle(img, eye_color, (width*2//3, height*2//5), width//10)
+            pygame.draw.circle(img, (0, 0, 0), (width//3, height*2//5), width//20)  # Pupil
+            pygame.draw.circle(img, (0, 0, 0), (width*2//3, height*2//5), width//20)  # Pupil
+            
+            # Mouth with teeth
+            pygame.draw.rect(img, (0, 0, 0), (width//3, height*3//5, width//3, height//8))
+            # Teeth
+            for i in range(2):
+                tooth_x = width//3 + i * width//6
+                pygame.draw.rect(img, WHITE, (tooth_x, height*3//5, width//12, height//16))
+        
+        # Claws/Hands
+        claw_color = (100, 0, 0)  # Darker red
+        
+        # Left hand with sharp claws
+        pygame.draw.rect(img, claw_color, (width//8, height//2, width//6, height//4))
+        for i in range(3):
+            claw_y = height//2 + i * height//12
+            pygame.draw.polygon(img, (50, 0, 0), [(width//8, claw_y), 
+                                               (0, claw_y - height//16), 
+                                               (0, claw_y + height//16)])
+        
+        # Right hand with sharp claws
+        pygame.draw.rect(img, claw_color, (width*5//6 - width//6, height//2, width//6, height//4))
+        for i in range(3):
+            claw_y = height//2 + i * height//12
+            pygame.draw.polygon(img, (50, 0, 0), [(width*5//6, claw_y), 
+                                               (width, claw_y - height//16), 
+                                               (width, claw_y + height//16)])
+            
+        # Horns on head
+        pygame.draw.polygon(img, (50, 0, 0), [(width//4, height//6), 
+                                           (width//6, 0), 
+                                           (width//3, 0)])
+        pygame.draw.polygon(img, (50, 0, 0), [(width*3//4, height//6), 
+                                           (width*5//6, 0), 
+                                           (width*2//3, 0)])
+                                           
+        # Add text label at bottom
+        font = pygame.font.Font(None, 20)
+        label = font.render(name.split('.')[0], True, WHITE)
+        label_rect = label.get_rect(center=(width//2, height - 10))
+        img.blit(label, label_rect)
+        
+    elif name.startswith("player"):
         # Draw a more detailed Mario-like character
         # Body (red overalls)
         pygame.draw.rect(img, RED, (width//4, height//3, width//2, height//2))
@@ -112,7 +201,7 @@ def load_image(name, width, height, color=None):
             pygame.draw.rect(img, leg_color, (width//4, height*3//4, width//6, height//4))
             pygame.draw.rect(img, leg_color, (width*3//5, height*3//4, width//6, height//4))
         else:
-            # De fault pose
+            # Default pose
             pygame.draw.rect(img, leg_color, (width//3, height*3//4, width//6, height//4))
             pygame.draw.rect(img, leg_color, (width//2, height*3//4, width//6, height//4))
         
@@ -216,6 +305,26 @@ def load_image(name, width, height, color=None):
             # Feet
             pygame.draw.ellipse(img, (220, 220, 0), (width//3 - width//20, height - height//10, width//4, height//15))
             pygame.draw.ellipse(img, (220, 220, 0), (width*3//5 - width//20, height - height//10, width//4, height//15))
+    
+    elif name.startswith("boss_projectile"):
+        # Create a spiky fireball projectile
+        # Base circle
+        pygame.draw.circle(img, (255, 50, 0), (width//2, height//2), width//3)
+        # Flame effect
+        for i in range(8):
+            angle = i * 45
+            outer_x = width//2 + int(width//2 * pygame.math.Vector2(1, 0).rotate(angle)[0])
+            outer_y = height//2 + int(height//2 * pygame.math.Vector2(1, 0).rotate(angle)[1])
+            pygame.draw.polygon(img, (255, 200, 0), [
+                (width//2, height//2),
+                (width//2 + int(width//4 * pygame.math.Vector2(0.5, 0.5).rotate(angle)[0]), 
+                 height//2 + int(height//4 * pygame.math.Vector2(0.5, 0.5).rotate(angle)[1])),
+                (outer_x, outer_y),
+                (width//2 + int(width//4 * pygame.math.Vector2(0.5, -0.5).rotate(angle)[0]), 
+                 height//2 + int(height//4 * pygame.math.Vector2(0.5, -0.5).rotate(angle)[1]))
+            ])
+        # Core
+        pygame.draw.circle(img, (255, 255, 200), (width//2, height//2), width//6)
     
     elif color:
         img.fill(color)

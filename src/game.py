@@ -1,5 +1,11 @@
 import pygame
 import random
+import sys
+import os
+
+# Add the parent directory to path so we can import modules when running directly
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from src.player import Player
 from src.enemy import Enemy
 from src.turtle import Turtle
@@ -8,7 +14,7 @@ from src.platform import Platform, MovingPlatform
 from src.spike import Spike
 from src.background import Tree, Bush, Cloud, Background
 from src.powerup import PowerUp, LifeIcon
-from src.constants import SCREEN_WIDTH, SCREEN_HEIGHT, MAX_LIVES
+from src.constants import SCREEN_WIDTH, SCREEN_HEIGHT, WORLD_WIDTH, MAX_LIVES
 
 def handle_enemy_collision(player, enemy, enemies, all_sprites):
     """Handle collision between player and enemy"""
@@ -63,8 +69,57 @@ def handle_enemy_collision(player, enemy, enemies, all_sprites):
             return True  # Return true to indicate damage
         return False  # Not game over if it's a turtle in shell state
 
+def reset_boss(boss, all_sprites):
+    """Completely reset a boss to initial state"""
+    if not boss:
+        return
+        
+    # Position
+    boss.rect.x = WORLD_WIDTH - 200
+    boss.rect.y = SCREEN_HEIGHT - 130
+    
+    # Health and state
+    boss.health = boss.max_health
+    boss.active = False
+    boss.defeated = False
+    boss.phase = 1
+    boss.rage_mode = False
+    boss.rage_timer = 0
+    
+    # Movement
+    boss.velocity_x = 0
+    boss.velocity_y = 0
+    boss.direction = -1
+    boss.speed = 3.0  # Reset to base speed
+    
+    # Attack state
+    boss.attacking = False
+    boss.attack_timer = 0
+    boss.attack_cooldown = 90
+    boss.stomped = False
+    boss.stomp_timer = 0
+    boss.invulnerable = False
+    boss.invulnerable_timer = 0
+    boss.current_attack = "none"
+    boss.current_pattern_index = 0
+    
+    # Visual effects
+    boss.flash_timer = 0
+    boss.shake_offset = [0, 0]
+    
+    # Reset animation
+    boss.animation_index = 0
+    boss.animation_timer = 0
+    boss.image = boss.idle_frames[0]
+    
+    # Clear projectiles
+    for projectile in boss.projectiles:
+        if projectile in all_sprites:
+            all_sprites.remove(projectile)
+    boss.projectiles.empty()
+
 def reset_game(all_sprites, enemies, coins, powerups, ui_elements, life_icons, platforms, moving_platforms,
-               player, camera, enemy_positions, turtle_positions, powerup_positions, fireballs):
+               player, camera, enemy_positions, turtle_positions, powerup_positions, fireballs, boss=None):
     """Reset the game state"""
     # Remove sound imports
     # Import sound objects inside function to ensure we get current values
@@ -103,6 +158,11 @@ def reset_game(all_sprites, enemies, coins, powerups, ui_elements, life_icons, p
         platform.rect.x = platform.start_x
         platform.rect.y = platform.start_y
         platform.speed = abs(platform.speed)  # Reset to original direction
+    
+    # Reset shrinking and falling platforms
+    for platform in platforms:
+        if hasattr(platform, 'reset'):
+            platform.reset()
     
     # Recreate coins if needed
     if len(coins) == 0:
@@ -147,6 +207,10 @@ def reset_game(all_sprites, enemies, coins, powerups, ui_elements, life_icons, p
             all_sprites.remove(fireball)
         fireballs.empty()
         
+    # Reset boss if present
+    if boss:
+        reset_boss(boss, all_sprites)
+        
     # Reset UI elements (life icons)
     for icon in ui_elements:
         ui_elements.remove(icon)
@@ -163,4 +227,10 @@ def reset_game(all_sprites, enemies, coins, powerups, ui_elements, life_icons, p
     # if main_theme:
     #     play_music(main_theme)
     
-    return False, False  # game_over, game_won 
+    return False, False  # game_over, game_won
+
+# Add a simple test function that runs if this file is executed directly
+if __name__ == "__main__":
+    print("Game module imported successfully!")
+    print("This file contains game utility functions and should not be run directly.")
+    print("Run main.py to start the game.") 
